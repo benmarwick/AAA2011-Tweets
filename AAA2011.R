@@ -1,9 +1,10 @@
 # 
 # Some preliminary details:
-# For those who might be coming to R for the first time
-# I used R x32 2.14.0 with Notepad++ 5.9.6.2 (http://notepad-plus-plus.org/) on Windows 7
+# 
+# I used R x32 2.14.0 on Windows 7
 # Although I have a 64-bit machine, I found that the RJava and Snowball packages only work on the 32 bit version of R
-# Notepad++ connects nicely to R using NppToR, setup is very easy: http://jekyll.math.byuh.edu/other/howto/notepadpp/
+# For the workflow, I used a text editor called Notepad++ (http://notepad-plus-plus.org/), which connects nicely to R using NppToR, 
+# setup of R and Notepad++ is very easy: http://jekyll.math.byuh.edu/other/howto/notepadpp/
 # 
 
 # here are the packages used throughout, might be easier to load them up at the start to avoid any unpleasant suprises 
@@ -43,7 +44,7 @@ barplot(count.sort.subset,las=2,cex.names =0.75) # plot to have a look at who th
 # Third step: examine some basic retweet statistics to see who are the influential tweeters
 # much of this comes from http://blog.ouseful.info/2011/11/09/getting-started-with-twitter-analysis-in-r/
 # Another thing that could have been done here is to look at the number of followers each tweeter has, but 
-# I kept getting “Error: Rate limit exceeded. Clients may not make more than 150 requests per hour.” when
+# I kept getting ï¿½Error: Rate limit exceeded. Clients may not make more than 150 requests per hour.ï¿½ when
 # I tried to do this. Links may be removed from the text of the tweets at this stage, I didn't, but here's 
 # a bit of code that might be helpful: http://heuristically.wordpress.com/2011/04/08/text-data-mining-twitter-r/#comment-199
 
@@ -51,12 +52,12 @@ df$text=sapply(df$text,function(row) iconv(row,to='UTF-8')) #remove odd characte
 trim <- function (x) sub('@','',x) # remove @ symbol from user names
 library(stringr)
 df$to=sapply(df$to,function(name) trim(name)) # pull out who msg is to
-df$rt=sapply(df$text,function(tweet) trim(str_match(tweet,"^RT (@[[:alnum:]_]*)")[2])) #extract who has been RT’d
+df$rt=sapply(df$text,function(tweet) trim(str_match(tweet,"^RT (@[[:alnum:]_]*)")[2])) #extract who has been RTï¿½d
 sum(!is.na(df$rt))  # see how many tweets are retweets
 sum(!is.na(df$rt))/length(df$rt)  # the ratio of retweets to tweets
 countRT<-table(df$rt)
 countRT<-sort(countRT)
-cd=subset(countRT,countRT>2) # subset those RT’d at least twice
+cd=subset(countRT,countRT>2) # subset those RTï¿½d at least twice
 barplot(cd,las=2,cex.names =0.75) # plot them
 
 # Fourth step: raw retweet counts are all very well, but let's look at the ratio of retweets to tweets
@@ -177,9 +178,9 @@ sci_all<-rbind(scienc,scient) #that seems to get most of them in one table...
 # Eigth step: cluster analysis to reveal less prominent topics that the token frequency and association analysis may have missed
 # This comes from Andrew Ziem's excellent post at http://heuristically.wordpress.com/2011/04/08/text-data-mining-twitter-r/
 
-a.dtm.sp<- removeSparseTerms(a.dtm, sparse=0.989)  # I found I had to iterate over this to ensure the dtm doesn’t get too small... for example: 0.990 nrow=88, 0.989, nrow=67, 0.985, nrow=37, 0.98 nrow=23, 0.95 nrow=6
+a.dtm.sp<- removeSparseTerms(a.dtm, sparse=0.989)  # I found I had to iterate over this to ensure the dtm doesnï¿½t get too small... for example: 0.990 nrow=88, 0.989, nrow=67, 0.985, nrow=37, 0.98 nrow=23, 0.95 nrow=6
 a.dtm.sp.df<- as.data.frame(inspect(a.dtm.sp)) # convert document term matrix to data frame
-nrow(a.dtm.sp.df) # check to see how many words we’re left with after removing sparse terms
+nrow(a.dtm.sp.df) # check to see how many words weï¿½re left with after removing sparse terms
 # next bit is from http://www.statmethods.net/advstats/cluster.html 
 a.dtm.sp.df.sc<-scale(a.dtm.sp.df) # scale data ready for distance matrix
 d <- dist(a.dtm.sp.df.sc, method = "euclidean") # make distance matrix
@@ -210,7 +211,7 @@ a.dtm.sp.t.tdif<-a.dtm.sp.t[row_sums(a.dtm.sp.t)>0,]
 summary(col_sums(a.dtm.sp.t.tdif)) # have a look
 
 # Before going right into generating the topic model and analysing the output, we need to decide on the number of topics that the model should use
-# Here’s a function to loop over different topic numbers, get the log liklihood of the model for each topic number and plot it so we can pick the best one
+# Hereï¿½s a function to loop over different topic numbers, get the log liklihood of the model for each topic number and plot it so we can pick the best one
 # The best number of topics is the one with the highest log liklihood value.
 
 best.model<-lapply(seq(2,50,by=1),function(d){LDA(a.dtm.sp.t.tdif,d)}) # this will make a topic model for every number of topics between 2 and 50... it will take some time! 
@@ -266,7 +267,7 @@ axis(1,pos=c(-4)) # puts an x-axis along the bottom of it all
 # That's all for the data analysis, but here are a few scraps I found useful along the way
 
 # Exporting high quality image files of the plots
-capabilities()["cairo"] # check I've got Cairo support for SVG export, should return "cairo TRUE" if you're using R 2.14.0. If not, use something from here http://en.wikibooks.org/wiki/R_Programming/Graphics#Exporting_graphs
+capabilities()["cairo"] # checks I've got Cairo support for SVG export, should return "cairo TRUE" if you're using R 2.14.0. If not, use something from here http://en.wikibooks.org/wiki/R_Programming/Graphics#Exporting_graphs
 svg("your_filename.svg") # creates object ready to receive my plot, there are many arguments this fuction can take, have a look here: http://stat.ethz.ch/R-manual/R-patched/library/grDevices/html/cairo.html
 # ... now do the plotting fuction... you wont see anything because it's going into the file you've created
 dev.off() # finish creating the svg object
