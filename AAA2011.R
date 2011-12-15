@@ -1,10 +1,9 @@
 # 
 # Some preliminary details:
-# 
-# I used R x32 2.14.0 on Windows 7
+# For those who might be coming to R for the first time
+# I used R x32 2.14.0 with Notepad++ 5.9.6.2 (http://notepad-plus-plus.org/) on Windows 7
 # Although I have a 64-bit machine, I found that the RJava and Snowball packages only work on the 32 bit version of R
-# For the workflow, I used a text editor called Notepad++ (http://notepad-plus-plus.org/), which connects nicely to R using NppToR, 
-# setup of R and Notepad++ is very easy: http://jekyll.math.byuh.edu/other/howto/notepadpp/
+# Notepad++ connects nicely to R using NppToR, setup is very easy: http://jekyll.math.byuh.edu/other/howto/notepadpp/
 # 
 
 # here are the packages used throughout, might be easier to load them up at the start to avoid any unpleasant suprises 
@@ -16,6 +15,7 @@ library(rJava)
 library(Snowball)
 library(plyr)
 library(stringr)
+library(pvclust)
 library(topicmodels)
 
 # First step: acquire the raw data
@@ -41,10 +41,17 @@ barplot(counts.sort) #barplot of names of tweeters and number of tweets, sorted 
 counts.sort.subset=subset(counts.sort,counts.sort>5) # create a subset of those who tweeted at least 5 times or more
 barplot(counts.sort.subset,las=2,cex.names =0.75) # plot to have a look at who these people are
 
+# now lets make a publication-quality plot with ggplot2
+library(ggplot2)
+counts.sort.subset.df<-data.frame(people=unlist(dimnames(counts.sort.subset)),count=unlist(counts.sort.subset)) # makes a funny sort of data frame...
+counts.sort.subset.df<-data.frame(people=as.factor(counts.sort.subset.df$people),counts=as.numeric(counts.sort.subset.df$count)) # makes a better data frame for ggplot to work with
+ggplot(counts.sort.subset.df, aes(reorder(people,counts),counts)) + xlab("Author") + ylab("Number of messages")+ geom_point() + coord_flip() + theme_bw() + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90)) + opts(plot.margin = unit(c(1,1,2,2), "lines")) # plot nicely ordered counts of tweets by person for people > 5 tweets
+ggsave(file = "tweet_counts.pdf") # export the plot to a PDF file
+
 # Third step: examine some basic retweet statistics to see who are the influential tweeters
 # much of this comes from http://blog.ouseful.info/2011/11/09/getting-started-with-twitter-analysis-in-r/
 # Another thing that could have been done here is to look at the number of followers each tweeter has, but 
-# I kept getting �Error: Rate limit exceeded. Clients may not make more than 150 requests per hour.� when
+# I kept getting “Error: Rate limit exceeded. Clients may not make more than 150 requests per hour.” when
 # I tried to do this. Links may be removed from the text of the tweets at this stage, I didn't, but here's 
 # a bit of code that might be helpful: http://heuristically.wordpress.com/2011/04/08/text-data-mining-twitter-r/#comment-199
 
@@ -52,13 +59,18 @@ df$text=sapply(df$text,function(row) iconv(row,to='UTF-8')) #remove odd characte
 trim <- function (x) sub('@','',x) # remove @ symbol from user names
 library(stringr)
 df$to=sapply(df$to,function(name) trim(name)) # pull out who msg is to
-df$rt=sapply(df$text,function(tweet) trim(str_match(tweet,"^RT (@[[:alnum:]_]*)")[2])) #extract who has been RT�d
+df$rt=sapply(df$text,function(tweet) trim(str_match(tweet,"^RT (@[[:alnum:]_]*)")[2])) #extract who has been RT’d
 sum(!is.na(df$rt))  # see how many tweets are retweets
 sum(!is.na(df$rt))/length(df$rt)  # the ratio of retweets to tweets
 countRT<-table(df$rt)
 countRT<-sort(countRT)
-cd=subset(countRT,countRT>2) # subset those RT�d at least twice
-barplot(cd,las=2,cex.names =0.75) # plot them
+countRT.subset=subset(countRT,countRT>2) # subset those RT’d at least twice
+barplot(countRT.subset,las=2,cex.names =0.75) # plot them
+
+# let's do another publication quality plot with ggplot2...
+countRT.subset.df<-data.frame(people=as.factor(unlist(dimnames(countRT.subset))),RT_count=as.numeric(unlist(countRT.subset))) # make a data frame for ggplot to work with, see how I combined the two steps for making the previous ggplot...
+ggplot(countRT.subset.df, aes(reorder(people,RT_count),RT_count)) + xlab("Author") + ylab("Number of messages retweeted by others")+ geom_point() + coord_flip() + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90)) + opts(plot.margin = unit(c(1,1,2,2), "lines"))  # plot nicely ordered counts of tweets by person for people > 5 tweets
+ggsave(file = "tweet_RT_counts.pdf") # export the plot to a PDF file
 
 # Fourth step: raw retweet counts are all very well, but let's look at the ratio of retweets to tweets
 # for some more insights
@@ -68,11 +80,17 @@ rt<-as.data.frame(table(df$rt))  # make table with counts of retweets per person
 t.rt<-merge(t,rt,by="Var1") # combine tweet count and retweet count per person
 t.rt["ratio"]<-t.rt$Freq.y / t.rt$Freq.x # creates new col and adds ratio tweet/retweet
 sort.t.rt<-t.rt[order(t.rt$ratio),] # sort it to put names in order by ratio
-sort.t.rt<-subset(sort.t.rt,sort.t.rt$Freq.x>2) # exclude those with 2 tweets or less
-barplot(sort.t.rt$ratio,las=2,cex.names =0.75, names.arg=sort.t.rt$Var1) # plot ratio by name
+sort.t.rt.subset<-subset(sort.t.rt,sort.t.rt$Freq.x>2) # exclude those with 2 tweets or less
+barplot(sort.t.rt.subset$ratio,las=2,cex.names =0.75, names.arg=sort.t.rt.subset$Var1) # plot ratio by name
+
+# and yet another publication quality plot with ggplot2
+sort.t.rt.subset.drop<-droplevels(sort.t.rt.subset) # drop unused levels that got in there somehow... note that this is already a data frame
+ggplot(sort.t.rt.subset.drop, aes(reorder(Var1,ratio),ratio)) + xlab("Author") + ylab("Ratio of messages retweeted by others to original messages")+ geom_point() + coord_flip() + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90)) + opts(plot.margin = unit(c(1,1,2,2), "lines"))  # plot nicely ordered counts of tweets by person for people > 5 tweets
+ggsave(file = "tweet_RT_ratio.pdf") # export the plot to a PDF file
+
 
 # Fifth step: see what people are linking to
-# I switched from base graphics to gglop2 here, just for fun
+# I gave up on base graphics just went with gglop2 here, just for fun
 
 df$link=sapply(df$text,function(tweet) str_extract(tweet,("http[[:print:]]+"))) # creates new field and extracts the links contained in the tweet
 df$link=sapply(df$text,function(tweet) str_extract(tweet,"http[[:print:]]{16}")) # limits to just 16 characters after http so I just get the shortened link. They are all shortened, so this is fine, but there might be a better way using regex.
@@ -163,6 +181,9 @@ length(aaa.text) #check how many tweets, make sure it agrees with the original s
 head(aaa.text,5) #check content sample, see that it looks as expected, no weird characters, etc. 
 aaa.scores<-score.sentiment(aaa.text,pos.words,neg.words,.progress='text') # get scores for the tweet text 
 hist(aaa.scores$score) # quick chart of overall sentiment
+ggplot(aaa.scores, aes(x=score)) + geom_histogram(binwidth=1) + xlab("Sentiment score") + ylab("Frequency") + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90, vjust = -0.25)) + opts(plot.margin = unit(c(1,1,2,2), "lines")) # plots nice histogram
+ggsave(file = "sentiment_hist.pdf") # export the plot to a PDF file
+
 aaa.pos<-subset(aaa.scores,aaa.scores$score>=2) # get tweets with only very +ve scores
 aaa.neg<-subset(aaa.scores,aaa.scores$score<=-2) # get tweets with only very -ve scores
 # have a quick scan through these very -/+ver tweets to see what they're about...
@@ -173,14 +194,17 @@ aaa.neg<-subset(aaa.scores,aaa.scores$score<=-2) # get tweets with only very -ve
 scienc<-subset(aaa.scores, regexpr("scienc", aaa.scores$text) > 0)   # extract tweets containing only scienc
 scient<-subset(aaa.scores, ignore.case = TRUE, regexpr("scient", aaa.scores$text) > 0) # extract tweets containing only scient
 sci_all<-rbind(scienc,scient) #that seems to get most of them in one table... 
+ggplot(sci_all, aes(x=score)) + geom_histogram(binwidth=1) + xlab("Sentiment score for the token 'scien'") + ylab("Frequency") + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90, vjust = -0.25)) + opts(plot.margin = unit(c(1,1,2,2), "lines")) # plots nice histogram
+ggsave(file = "sentiment_hist_scien.pdf") # export the plot to a PDF file
 # now repeat this subsetting for the ten most frequently occuring tokens...
 
-# Eigth step: cluster analysis to reveal less prominent topics that the token frequency and association analysis may have missed
+
+# Eighth step: cluster analysis to reveal less prominent topics that the token frequency and association analysis may have missed
 # This comes from Andrew Ziem's excellent post at http://heuristically.wordpress.com/2011/04/08/text-data-mining-twitter-r/
 
-a.dtm.sp<- removeSparseTerms(a.dtm, sparse=0.989)  # I found I had to iterate over this to ensure the dtm doesn�t get too small... for example: 0.990 nrow=88, 0.989, nrow=67, 0.985, nrow=37, 0.98 nrow=23, 0.95 nrow=6
+a.dtm.sp<- removeSparseTerms(a.dtm, sparse=0.989)  # I found I had to iterate over this to ensure the dtm doesn’t get too small... for example: 0.990 nrow=88, 0.989, nrow=67, 0.985, nrow=37, 0.98 nrow=23, 0.95 nrow=6
 a.dtm.sp.df<- as.data.frame(inspect(a.dtm.sp)) # convert document term matrix to data frame
-nrow(a.dtm.sp.df) # check to see how many words we�re left with after removing sparse terms
+nrow(a.dtm.sp.df) # check to see how many words we’re left with after removing sparse terms
 # next bit is from http://www.statmethods.net/advstats/cluster.html 
 a.dtm.sp.df.sc<-scale(a.dtm.sp.df) # scale data ready for distance matrix
 d <- dist(a.dtm.sp.df.sc, method = "euclidean") # make distance matrix
@@ -191,12 +215,17 @@ plot(fit) # display dendogram
 # also from http://www.statmethods.net/advstats/cluster.html
 a.dtm.sp.df.sc.t<-t(a.dtm.sp.df.sc) # transpose scaled data
 fit <- pvclust(a.dtm.sp.df.sc.t, method.hclust="average", method.dist="correlation", nboot=10000) # this method gives good clusters... It took about 3 h to do the bootstraping, you can reduce the nboot value for a quicker result
-plot(fit, col.pv=c(1,0,0), main="Cluster dengrogram with AU values (%)")  # hide BP and edge values, since AU values are the most important
+plot(fit, cex=1.5, cex.pv=1.2, col.pv=c(1,0,0), main="", xlab="", sub="")  # hide BP and edge values, since AU values are the most important
 pvrect(fit, alpha=.95) # add rectangles around groups highly supported by the data, if you want to, useful for a quick look, but too cluttered for anything else.
+pdf(file="token_cluster.pdf", height=10, width=20)
+# now redo the plot(..) above to write to pdf file
+dev.off() # finalise by flushing output to pdf
+
 #now do some diagnostics, cf. http://www.is.titech.ac.jp/~shimo/prog/pvclust/
 seplot(fit) # show standard errors for p-values
 seplot(fit,identify=TRUE) # click on the chart to brush points with very high values, then hit stop when done, returns point IDs
 print(fit, which=c(61)) # gives diagnostics for eg point 61, can help to decide if need to increase bootstrap resamples to reduce standard errors.
+
 
 # Nineth step: topic modeling to automatically identify topics in the corpus. There are two packages for this, topic models and lda. lda seems to be 
 # popular, perhaps because the author is a data scientist at facebook. But I couldn't figure it out so I used topicmodels, which is better documented 
@@ -211,14 +240,20 @@ a.dtm.sp.t.tdif<-a.dtm.sp.t[row_sums(a.dtm.sp.t)>0,]
 summary(col_sums(a.dtm.sp.t.tdif)) # have a look
 
 # Before going right into generating the topic model and analysing the output, we need to decide on the number of topics that the model should use
-# Here�s a function to loop over different topic numbers, get the log liklihood of the model for each topic number and plot it so we can pick the best one
+# Here’s a function to loop over different topic numbers, get the log liklihood of the model for each topic number and plot it so we can pick the best one
 # The best number of topics is the one with the highest log liklihood value.
 
 best.model<-lapply(seq(2,50,by=1),function(d){LDA(a.dtm.sp.t.tdif,d)}) # this will make a topic model for every number of topics between 2 and 50... it will take some time! 
 best.model.logLik<-as.data.frame(as.matrix(lapply(best.model,logLik)))  # this will produce a list of logLiks for each model... 
 plot(as.matrix(best.model.logLik$V1), type="l") #have a quick look at the distribution of log liklihood values for all the models generated
-qplot(best.model.logLik$topics,best.model.logLik$loglik, geom="line") # make a more fancy chart to see the peak
-best.model.logLik.sort<-best.model.logLik[order(best.model.logLik$loglik),] # sort to find out which number of topics has the highest loglik, in this case 23 topics. 
+
+# yet another publication-quality plot with ggplot2
+best.model.logLik.df<-<-data.frame(topics=c(2:50),LL=as.numeric(as.matrix(diag.logLik)))
+ggplot(best.model.logLik.df, aes(x=topics, y=LL)) + xlab("Number of topics") + ylab("Log liklihood of the model")+ geom_line() + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90, vjust= -0.25)) + opts(plot.margin = unit(c(1,1,2,2), "lines"))  # plot nicely the distribution of logliklihoods by topic
+ggsave(file = "model_LL_per_topic_number.pdf") # export the plot to a PDF file
+
+best.model.logLik.df.sort<-best.model.logLik.df[order(-best.model.logLik.df$LL),] # sort to find out which number of topics has the highest loglik, in this case 23 topics. 
+best.model.logLik.df.sort # have a look to see what's at the top of the list, that's the one with the highest score
 # So from this function I've got 23 topics as the best number to use for the topic model to investigate in more detail
 
 # Now I'll look in more detail at the model with 23 topics to find out the keywords for each topic
@@ -266,8 +301,8 @@ axis(1,pos=c(-4)) # puts an x-axis along the bottom of it all
 
 # That's all for the data analysis, but here are a few scraps I found useful along the way
 
-# Exporting high quality image files of the plots
-capabilities()["cairo"] # checks I've got Cairo support for SVG export, should return "cairo TRUE" if you're using R 2.14.0. If not, use something from here http://en.wikibooks.org/wiki/R_Programming/Graphics#Exporting_graphs
+# Exporting high quality image files of the plots, if you don't want PDFs
+capabilities()["cairo"] # check I've got Cairo support for SVG export, should return "cairo TRUE" if you're using R 2.14.0. If not, use something from here http://en.wikibooks.org/wiki/R_Programming/Graphics#Exporting_graphs
 svg("your_filename.svg") # creates object ready to receive my plot, there are many arguments this fuction can take, have a look here: http://stat.ethz.ch/R-manual/R-patched/library/grDevices/html/cairo.html
 # ... now do the plotting fuction... you wont see anything because it's going into the file you've created
 dev.off() # finish creating the svg object
@@ -278,3 +313,7 @@ dev.off() # finish creating the svg object
 save(s,file="your_filename.RData")
 # Coming backing to it and loading up the data to continue
 load("your_filename.RData", .GlobalEnv)
+
+# Finding out what format the data are in, because sometimes I can't tell
+class(your_data_object)
+# will return "list" or "data.frame" or whatever it is
