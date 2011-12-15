@@ -37,9 +37,9 @@ head(df,3) # look at some example content
 length(unique(df$screenName)) # see how many unique tweeter accounts in the sample
 counts=table(df$screenName)
 counts.sort<-sort(counts) 
-barplot(count.sort) #barplot of names of tweeters and number of tweets, sorted by count
-count.sort.subset=subset(count.sort,countS>5) # create a subset of those who tweeted at least 5 times or more
-barplot(count.sort.subset,las=2,cex.names =0.75) # plot to have a look at who these people are
+barplot(counts.sort) #barplot of names of tweeters and number of tweets, sorted by count
+counts.sort.subset=subset(counts.sort,counts.sort>5) # create a subset of those who tweeted at least 5 times or more
+barplot(counts.sort.subset,las=2,cex.names =0.75) # plot to have a look at who these people are
 
 # Third step: examine some basic retweet statistics to see who are the influential tweeters
 # much of this comes from http://blog.ouseful.info/2011/11/09/getting-started-with-twitter-analysis-in-r/
