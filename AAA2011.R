@@ -207,7 +207,7 @@ a.dtm.sp.df<- as.data.frame(inspect(a.dtm.sp)) # convert document term matrix to
 nrow(a.dtm.sp.df) # check to see how many words we’re left with after removing sparse terms
 # next bit is from http://www.statmethods.net/advstats/cluster.html 
 a.dtm.sp.df.sc<-scale(a.dtm.sp.df) # scale data ready for distance matrix
-d <- dist(a.dtm.sp.df.sc, method = "euclidean") # make distance matrix
+d <- dist(a.dtm.sp.df.sc, method = "euclidean") # make simple distance matrix
 fit <- hclust(d, method="ward") # perform hierarchical cluster analysis
 plot(fit) # display dendogram
 # This basic cluseter was fine for a quick look, but read on for a more fancy (and time consuming) analysis that I like better
@@ -225,7 +225,6 @@ dev.off() # finalise by flushing output to pdf
 seplot(fit) # show standard errors for p-values
 seplot(fit,identify=TRUE) # click on the chart to brush points with very high values, then hit stop when done, returns point IDs
 print(fit, which=c(61)) # gives diagnostics for eg point 61, can help to decide if need to increase bootstrap resamples to reduce standard errors.
-
 
 # Nineth step: topic modeling to automatically identify topics in the corpus. There are two packages for this, topic models and lda. lda seems to be 
 # popular, perhaps because the author is a data scientist at facebook. But I couldn't figure it out so I used topicmodels, which is better documented 
@@ -266,7 +265,7 @@ write.csv(lda_terms,"lda_terms.csv") # Output to csv file, I found this a bit ea
 get_topics(lda, 5) # gets topic numbers per document
 lda_topics<-get_topics(lda, 5) 
 write.csv(lda_topics,"lda_topics.csv") # output to csv file. 
-# If you need to find out where all these csv files are being saved, try thi
+# If you need to find out where all these csv files are being saved, try this
 getwd() # tells you R's  working directory, which is where it saves files and looks for files, etc.
 beta<-lda@beta # create object containing parameters of the word distribution for each topic
 gamma<-lda@gamma # create object containing posterior topic distribution for each document
@@ -280,30 +279,50 @@ beta_ranked<- lapply(1:nrow(id),function(i)beta[i,id[i,]])  # gives table of wor
 # http://stackoverflow.com/questions/8337980/r-yaletoolkit-how-to-change-the-font-size-of-tick-labels-on-the-sparklines
 # and from a very helpful post by Jason Dieterle on the Edward Tufte forum: http://www.edwardtufte.com/bboard/q-and-a-fetch-msg?msg_id=00037p
 
-gamma.df<-as.data.frame(gamma)) # prepare the topics per document output for plotting
-# setup the plot area, see http://www.programmingr.com/content/controlling-margins-and-axes-oma-and-mgp for details
+gamma.df<-as.data.frame(gamma) # prepare the topics per document output for plotting
+names(gamma.df)<- c(1:23) # set the col names to the topic number the each col represents
+# setup the plot area, see http://www.programmingr.com/content/controlling-margins-and-axes-oma-and-mgp  or http://research.stowers-institute.org/efg/R/Graphics/Basics/mar-oma/index.htm for details
 par(mfrow=c(ncol(gamma.df),1), # sets number of rows in space to number of cols in the gamma data frame (ie. 23 topics)
-    mar=c(0,0,1,0), # sets margin size for the figures
-    oma=c(4,5,4,2), # sets outer margin
-    mgp=c(2,1,0))   # sets the way axes and labels are spatially arranged
+    mar=c(0,5,0.25,5), # sets margin size for the figures
+    oma=c(4,4,4,4)) # sets outer margin
+    #mgp=c(1,1,0))   # sets the way axes and labels are spatially arranged, don't need it if tickmark labels are not used
 for (i in 1:ncol(gamma.df)){ # setup for statement to loops over all topics (ie. columns) in gamma.df
-        plot(gamma.df[,i], # use col data, not rows from data frame gamma.df
-        col="#858585",lwd=0.5, #make the line grey and thin
-        axes=F,ylab="",xlab="",main="",type="l"); # suppress all axes lines, set as line plot
-        axis(2,yaxp=c(min(gamma.df[,i]),max(gamma.df[,i]),2), # define the y-axis: only show tickmarks for max and min values of col
-        cex.axis=0.85,las=1, # shrink fontsize of tickmark labels slightly, make text horizontal for easy reading
-        at=c(round(min(gamma.df[,i]),3),round(max(gamma.df[,i]),3))); #specify where tickmark numbers go and round them to keep it tidy
-        axis(2,yaxp=c(min(gamma.df[,i]),max(gamma.df[,i]),2),col="white",tcl=0,labels=FALSE)  # further define the y-axis: put a 2nd white axis line over the 1st y-axis to make it invisible
         ymin<-min(gamma.df[,i]); tmin<-which.min(gamma.df[,i]);ymax<-max(gamma.df[,i]);tmax<-which.max(gamma.df[,i]); # determines min, max and indices of these for the next line...
-        points(x=c(tmax),y=c(ymax),pch=19,col=c("black"),cex=0.8); # add coloured points at maxima to highlight them, if you like
+    	plot(gamma.df[,i], # use col data, not rows from data frame gamma.df
+        col="#00000099",lwd=0.5, #make the line grey and thin
+        axes=F,ylab="",xlab="",main="",type="l"); # suppress all axes lines, set as line plot
+        #axis(2,yaxp=c(min(gamma.df[,i]),max(gamma.df[,i]),2), # define the y-axis: only show tickmarks for max and min values of col
+        #cex.axis=0.85,las=1, # shrink fontsize of tickmark labels slightly, make text horizontal for easy reading
+        #at=c(round(min(gamma.df[,i]),3),round(max(gamma.df[,i]),3))); #specify where tickmark numbers go and round them to keep it tidy
+        #axis(2,yaxp=c(min(gamma.df[,i]),max(gamma.df[,i]),2),col="white",tcl=0,labels=FALSE)  # further define the y-axis: put a 2nd white axis line over the 1st y-axis to make it invisible
+		text(x=-1,y=(ymin+ymax)/2,labels=100*(round(max(gamma.df[,i]),3)),cex=1.5,pos=2,col="#000000") # places ttext giving the max value at the LHS of each plot
+		text(x=length(gamma.df[,i])*1.06,y=(ymin+ymax)/2,labels=names(gamma.df)[i],cex=1.4,pos=2,col="#000000") # places ttext giving the max value at the LHS of each plot
+		abline(v=c(tmax),col=c("#00000050"),lwd=20); # draws a fat transparent vertical line (a rectangle, really) at the max value to highlight it 
         }
-axis(1,pos=c(-4)) # puts an x-axis along the bottom of it all
+axis(1,pos=c(-1)) # puts an x-axis along the bottom of it all
+# Note that while this is my fanciest plot, I couldn't quite get it to look right. The text at the side is clipped by some invisible margin that I couldn't seem
+# to fix by adjusting mar and oma, and the last axis wouldn't show up. I had to fiddle a bit in Inkscape to get it how I wanted, but since I could output 
+# the plot as SVG (see below) this was easily done.
+
+# show the distribution of tweets over time in the corpus
+ df$created_hour<-sapply(df$created,function(tweet) str_extract(tweet, ("[[:print:]]{13}"))) # Create a new field in df that just has the date and hour
+created_hour<-table(df$created_hour) # convert to table for basic plotting
+created_hour.df<-data.frame(hour=as.factor(unlist(dimnames(created_hour))),count=as.numeric(unlist(created_hour)))
+ggplot(created_hour.df, aes(x=hour,y=count)) + xlab("Time") + ylab("Number of messages")+ geom_bar()  + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90)) + opts(plot.margin = unit(c(1,1,2,2), "lines")) + opts(axis.text.x = theme_text(angle = 90))# plot nicely ordered counts of tweets per hour
+# but I really want a continuous time scale, in the correct time zone, so..
+write.csv(created_hour.df, file="created_hour.csv") # make a csv file to manipulate in Excel... create a full time series manually, then add data frame values into it with HLOOKUP function
+created_hour_full_series.df<-read.csv("created_hour_full_series.csv", header=TRUE, sep=",") # read Excel manipulations back in to a new data frame
+ggplot(created_hour_full_series.df, aes(x=hour,y=count)) + xlab("Time") + ylab("Number of messages")+ geom_bar(stat="identity")  + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90)) + opts(plot.margin = unit(c(1,1,2,2), "lines")) + opts(axis.text.x = theme_text(angle = 90)) # use these to supress all grid lines: + scale_x_discrete(breaks = NA) + scale_y_continuous(breaks = NA) # plot nicely ordered counts of tweets per hour
+# then save as SVG and so some serious work to combine with topic proportion time series to make a kind-of rug-plot out of tweets-per-hour
+
+
+
 
 # That's all for the data analysis, but here are a few scraps I found useful along the way
 
-# Exporting high quality image files of the plots, if you don't want PDFs
+# Exporting high quality image files of the plots
 capabilities()["cairo"] # check I've got Cairo support for SVG export, should return "cairo TRUE" if you're using R 2.14.0. If not, use something from here http://en.wikibooks.org/wiki/R_Programming/Graphics#Exporting_graphs
-svg("your_filename.svg") # creates object ready to receive my plot, there are many arguments this fuction can take, have a look here: http://stat.ethz.ch/R-manual/R-patched/library/grDevices/html/cairo.html
+svg("psuedo-time-series.svg", height=6, width=12) # creates object ready to receive my plot, there are many arguments this fuction can take, have a look here: http://stat.ethz.ch/R-manual/R-patched/library/grDevices/html/cairo.html
 # ... now do the plotting fuction... you wont see anything because it's going into the file you've created
 dev.off() # finish creating the svg object
 # now go to R's working directory and find the svg file you made and have a look using Inkscape (http://inkscape.org/) and edit if required or 'export bitmap'/'save as' the format required.
