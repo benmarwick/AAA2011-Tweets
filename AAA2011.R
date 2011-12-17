@@ -248,9 +248,9 @@ plot(as.matrix(best.model.logLik$V1), type="l") #have a quick look at the distri
 
 # yet another publication-quality plot with ggplot2
 best.model.logLik.df<-<-data.frame(topics=c(2:50),LL=as.numeric(as.matrix(diag.logLik)))
-ggplot(best.model.logLik.df, aes(x=topics, y=LL)) + xlab("Number of topics") + ylab("Log liklihood of the model")+ geom_line() + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90, vjust= -0.25)) + opts(plot.margin = unit(c(1,1,2,2), "lines"))  # plot nicely the distribution of logliklihoods by topic
+ggplot(best.model.logLik.df, aes(x=topics, y=LL)) + xlab("Number of topics") + ylab("Log likelihood of the model")+ geom_line() + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90, vjust= -0.25)) + opts(plot.margin = unit(c(1,1,2,2), "lines"))  # plot nicely the distribution of logliklihoods by topic
 ggsave(file = "model_LL_per_topic_number.pdf") # export the plot to a PDF file
-
+# it's not easy to see exactly which topic number has the highest LL, so let's look at the data...
 best.model.logLik.df.sort<-best.model.logLik.df[order(-best.model.logLik.df$LL),] # sort to find out which number of topics has the highest loglik, in this case 23 topics. 
 best.model.logLik.df.sort # have a look to see what's at the top of the list, that's the one with the highest score
 # So from this function I've got 23 topics as the best number to use for the topic model to investigate in more detail
@@ -288,7 +288,7 @@ par(mfrow=c(ncol(gamma.df),1), # sets number of rows in space to number of cols 
     #mgp=c(1,1,0))   # sets the way axes and labels are spatially arranged, don't need it if tickmark labels are not used
 for (i in 1:ncol(gamma.df)){ # setup for statement to loops over all topics (ie. columns) in gamma.df
         ymin<-min(gamma.df[,i]); tmin<-which.min(gamma.df[,i]);ymax<-max(gamma.df[,i]);tmax<-which.max(gamma.df[,i]); # determines min, max and indices of these for the next line...
-    	plot(gamma.df[,i], # use col data, not rows from data frame gamma.df
+		plot(gamma.df[,i], # use col data, not rows from data frame gamma.df
         col="#00000099",lwd=0.5, #make the line grey and thin
         axes=F,ylab="",xlab="",main="",type="l"); # suppress all axes lines, set as line plot
         #axis(2,yaxp=c(min(gamma.df[,i]),max(gamma.df[,i]),2), # define the y-axis: only show tickmarks for max and min values of col
@@ -322,7 +322,7 @@ ggplot(created_hour_full_series.df, aes(x=hour,y=count)) + xlab("Time") + ylab("
 
 # Exporting high quality image files of the plots
 capabilities()["cairo"] # check I've got Cairo support for SVG export, should return "cairo TRUE" if you're using R 2.14.0. If not, use something from here http://en.wikibooks.org/wiki/R_Programming/Graphics#Exporting_graphs
-svg("psuedo-time-series.svg", height=6, width=12) # creates object ready to receive my plot, there are many arguments this fuction can take, have a look here: http://stat.ethz.ch/R-manual/R-patched/library/grDevices/html/cairo.html
+svg("sparklines.svg", height=6, width=12) # creates object ready to receive my plot, there are many arguments this fuction can take, have a look here: http://stat.ethz.ch/R-manual/R-patched/library/grDevices/html/cairo.html
 # ... now do the plotting fuction... you wont see anything because it's going into the file you've created
 dev.off() # finish creating the svg object
 # now go to R's working directory and find the svg file you made and have a look using Inkscape (http://inkscape.org/) and edit if required or 'export bitmap'/'save as' the format required.
