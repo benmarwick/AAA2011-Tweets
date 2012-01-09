@@ -1,9 +1,7 @@
 # 
 # Some preliminary details:
-# For those who might be coming to R for the first time
-# I used R x32 2.14.0 with Notepad++ 5.9.6.2 (http://notepad-plus-plus.org/) on Windows 7
+# I used R x32 2.14.0 with RStudio 0.94 (http://rstudio.org/) on Windows 7
 # Although I have a 64-bit machine, I found that the RJava and Snowball packages only work on the 32 bit version of R
-# Notepad++ connects nicely to R using NppToR, setup is very easy: http://jekyll.math.byuh.edu/other/howto/notepadpp/
 # 
 
 # here are the packages used throughout, might be easier to load them up at the start to avoid any unpleasant suprises 
@@ -210,9 +208,11 @@ a.dtm.sp.df.sc<-scale(a.dtm.sp.df) # scale data ready for distance matrix
 d <- dist(a.dtm.sp.df.sc, method = "euclidean") # make simple distance matrix
 fit <- hclust(d, method="ward") # perform hierarchical cluster analysis
 plot(fit) # display dendogram
+
 # This basic cluseter was fine for a quick look, but read on for a more fancy (and time consuming) analysis that I like better
 # This next bit gives a cluster analysis p-values for hierarchical clustering based on multiscale bootstrap resampling, 
 # also from http://www.statmethods.net/advstats/cluster.html
+
 a.dtm.sp.df.sc.t<-t(a.dtm.sp.df.sc) # transpose scaled data
 fit <- pvclust(a.dtm.sp.df.sc.t, method.hclust="average", method.dist="correlation", nboot=10000) # this method gives good clusters... It took about 3 h to do the bootstraping, you can reduce the nboot value for a quicker result
 plot(fit, cex=1.5, cex.pv=1.2, col.pv=c(1,0,0), main="", xlab="", sub="")  # hide BP and edge values, since AU values are the most important
@@ -314,8 +314,6 @@ write.csv(created_hour.df, file="created_hour.csv") # make a csv file to manipul
 created_hour_full_series.df<-read.csv("created_hour_full_series.csv", header=TRUE, sep=",") # read Excel manipulations back in to a new data frame
 ggplot(created_hour_full_series.df, aes(x=hour,y=count)) + xlab("Time") + ylab("Number of messages")+ geom_bar(stat="identity")  + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90)) + opts(plot.margin = unit(c(1,1,2,2), "lines")) + opts(axis.text.x = theme_text(angle = 90)) # use these to supress all grid lines: + scale_x_discrete(breaks = NA) + scale_y_continuous(breaks = NA) # plot nicely ordered counts of tweets per hour
 # then save as SVG and so some serious work to combine with topic proportion time series to make a kind-of rug-plot out of tweets-per-hour
-
-
 
 
 # That's all for the data analysis, but here are a few scraps I found useful along the way
