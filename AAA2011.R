@@ -247,7 +247,7 @@ best.model.logLik<-as.data.frame(as.matrix(lapply(best.model,logLik)))  # this w
 plot(as.matrix(best.model.logLik$V1), type="l") #have a quick look at the distribution of log liklihood values for all the models generated
 
 # yet another publication-quality plot with ggplot2
-best.model.logLik.df<-<-data.frame(topics=c(2:50),LL=as.numeric(as.matrix(diag.logLik)))
+best.model.logLik.df<-data.frame(topics=c(2:50),LL=as.numeric(as.matrix(best.model.logLik)))
 ggplot(best.model.logLik.df, aes(x=topics, y=LL)) + xlab("Number of topics") + ylab("Log likelihood of the model")+ geom_line() + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y=theme_text(size = 14, angle=90, vjust= -0.25)) + opts(plot.margin = unit(c(1,1,2,2), "lines"))  # plot nicely the distribution of logliklihoods by topic
 ggsave(file = "model_LL_per_topic_number.pdf") # export the plot to a PDF file
 # it's not easy to see exactly which topic number has the highest LL, so let's look at the data...
