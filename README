@@ -11,7 +11,7 @@ The code details ten steps in the analysis and visualisation of the tweets:
 7.  calculating senitment scores of tweets, including on subsets containing tokens of interest
 8.  hierarchical clustering of tokens based on multiscale bootstrap resampling
 9.  topic modelling the tweet corpus using latent Dirichlet allocation
-10. plotting a pseudo-time series plot of changes in topic frequency over time
+
 
 
 
