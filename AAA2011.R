@@ -1,4 +1,3 @@
-
 # get package with functions for interacting with Twitter.com
 require(twitteR) 
 # get 1500 tweets with #aaa2011 tag, note that 1500 is the max, and it's subject to filtering and other restrictions by Twitter
@@ -207,10 +206,10 @@ a <- tm_map(a, removeWords, stopwords("english")) # this list needs to be edited
 require(rJava) # needed for stemming function 
 library(Snowball) # also needed for stemming function 
 a <- tm_map(a, stemDocument, language = "english") # converts terms to tokens
-a.dtm <- TermDocumentMatrix(a, control = list(minWordLength = 3)) # create a term document matrix, keepiing only tokens longer than three characters, since shorter tokens are very hard to interpret
-inspect(a.dtm[1:10,1:10]) # have a quick look at the term document matrix
-findFreqTerms(a.dtm, lowfreq=30) # have a look at common words, in this case, those that appear at least 30 times, good to get high freq words and add to stopword list and re-make the dtm, in this case add aaa, panel, session
-findAssocs(a.dtm, 'science', 0.30) # find associated words and strength of the common words. I repeated this function for the ten most frequent words.
+a.tdm <- TermDocumentMatrix(a, control = list(minWordLength = 3)) # create a term document matrix, keeping only tokens longer than three characters, since shorter tokens are very hard to interpret
+inspect(a.tdm[1:10,1:10]) # have a quick look at the term document matrix
+findFreqTerms(a.tdm, lowfreq=30) # have a look at common words, in this case, those that appear at least 30 times, good to get high freq words and add to stopword list and re-make the dtm, in this case add aaa, panel, session
+findAssocs(a.tdm, 'science', 0.30) # find associated words and strength of the common words. I repeated this function for the ten most frequent words.
 
 # investigate the URLs contained in the Twitter messages
 require(stringr)
@@ -317,31 +316,33 @@ scien <- subset(aaa.scores, regexpr("scien", aaa.scores$text) > 0)   # extract t
 ggplot(scien, aes(x = score)) + geom_histogram(binwidth = 1) + xlab("Sentiment score for the token 'scien'") + ylab("Frequency") + theme_bw()  + opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + opts(axis.title.y = theme_text(size = 14, angle = 90, vjust = -0.25)) + opts(plot.margin = unit(c(1,1,2,2), "lines")) 
 # repeat this block with different high frequency words
 
-a.dtm.sp <- removeSparseTerms(a.dtm, sparse=0.989)  # I found I had to iterate over this to ensure the dtm doesn't get too small... for example: 0.990 nrow=88, 0.989, nrow=67, 0.985, nrow=37, 0.98 nrow=23, 0.95 nrow=6
-a.dtm.sp.df <- as.data.frame(inspect(a.dtm.sp)) # convert document term matrix to data frame
-nrow(a.dtm.sp.df) # check to see how many words we're left with after removing sparse terms
+a.tdm.sp <- removeSparseTerms(a.tdm, sparse=0.989)  # I found I had to iterate over this to ensure the tdm doesn't get too small... for example: 0.990 nrow=88, 0.989, nrow=67, 0.985, nrow=37, 0.98 nrow=23, 0.95 nrow=6
+a.tdm.sp.df <- as.data.frame(inspect(a.tdm.sp)) # convert document term matrix to data frame
+nrow(a.tdm.sp.df) # check to see how many words we're left with after removing sparse terms
 # this analysis is based on http://www.statmethods.net/advstats/cluster.html 
 # scale and transpose data for cluster analysis
-a.dtm.sp.df.sc.t <- t(scale(a.dtm.sp.df))
+a.tdm.sp.df.sc.t <- t(scale(a.tdm.sp.df))
 require(pvclust)
-fit <- pvclust(a.dtm.sp.df.sc.t, method.hclust = "average", method.dist = "correlation", nboot = 10) # this method may take a few hours the bootstraping, you can reduce the nboot value for a quicker result
+fit <- pvclust(a.tdm.sp.df.sc.t, method.hclust = "average", method.dist = "correlation", nboot = 10) # this method may take a few hours the bootstraping, you can reduce the nboot value for a quicker result
 plot(fit, cex = 1.5, cex.pv = 1.2, col.pv = c(1,0,0), main="", xlab="", sub="")  # draw the dendrogram
 
 require(slam)
-a.dtm.sp.t <- t(a.dtm.sp) # transpose document term matrix, necessary for the next steps using mean term frequency-inverse document frequency (tf-idf) to select the vocabulary for topic modeling
-summary(col_sums(a.dtm.sp.t)) # check median...
-term_tfidf <- tapply(a.dtm.sp.t$v/row_sums(a.dtm.sp.t)[a.dtm.sp.t$i], a.dtm.sp.t$j,mean) * log2(nDocs(a.dtm.sp.t)/col_sums(a.dtm.sp.t>0)) # calculate tf-idf values
-summary(term_tfidf) # check median... note value for next line... 
-a.dtm.sp.t.tdif <- a.dtm.sp.t[,term_tfidf>=1.0] # keep only those terms that are slightly less frequent that the median
-a.dtm.sp.t.tdif <- a.dtm.sp.t[row_sums(a.dtm.sp.t) > 0, ]
-summary(col_sums(a.dtm.sp.t.tdif)) # have a look
+a.tdm.sp.t <- t(a.tdm.sp) # transpose term document matrix, necessary for the next steps using mean term frequency-inverse document frequency (tf-idf) to select the vocabulary for topic modeling
+summary(col_sums(a.tdm.sp.t)) # check median...
+mean_term_tfidf <- tapply(a.tdm.sp.t$v/row_sums(a.tdm.sp.t)[a.tdm.sp.t$i], a.tdm.sp.t$j,mean) * log2(nDocs(a.tdm.sp.t)/col_sums(a.tdm.sp.t>0)) # calculate tf-idf values
+# CAUTION: Note that Hugh J. Devlin has pointed out that this tf-idf is not the conventional computation because the term document matrix has been transposed
+# for the usual tf-idf computation, skip the transpose operation on line 330
+summary(mean_term_tfidf) # check median... note value for next line... 
+a.tdm.sp.t.tdif <- a.tdm.sp.t[,mean_term_tfidf>=1.0] # keep only those terms that are slightly less frequent that the median
+a.tdm.sp.t.tdif <- a.tdm.sp.t[row_sums(a.tdm.sp.t) > 0, ]
+summary(col_sums(a.tdm.sp.t.tdif)) # have a look
 
 # Before going right into generating the topic model and analysing the output, we need to decide on the number of topics that the model should use
 # Here's a function to loop over different topic numbers, get the log liklihood of the model for each topic number and plot it so we can pick the best one
 # The best number of topics is the one with the highest log liklihood value.
 
 require(topicmodels)
-best.model <- lapply(seq(2, 50, by = 1), function(d){LDA(a.dtm.sp.t.tdif, d)}) # this will make a topic model for every number of topics between 2 and 50... it will take some time! 
+best.model <- lapply(seq(2, 50, by = 1), function(d){LDA(a.tdm.sp.t.tdif, d)}) # this will make a topic model for every number of topics between 2 and 50... it will take some time! 
 best.model.logLik <- as.data.frame(as.matrix(lapply(best.model, logLik)))  # this will produce a list of logLiks for each model... 
 
 # plot the distribution of logliklihoods by topic
@@ -360,7 +361,7 @@ best.model.logLik.df.sort # have a look to see what's at the top of the list, th
 
 
 
-lda <- LDA(a.dtm.sp.t.tdif,23) # generate a LDA model with 23 topics, as found to be optimum
+lda <- LDA(a.tdm.sp.t.tdif,23) # generate a LDA model with 23 topics, as found to be optimum
 get_terms(lda, 5) # get keywords for each topic, just for a quick look
 get_topics(lda, 5) # gets topic numbers per document
 lda_topics<-get_topics(lda, 5) 
