@@ -1,7 +1,19 @@
+# code in DMAR chapter
+
+# This code was last run sucessfully on Nov 2013 in the this environment:
+# R version 3.0.2 (2013-09-25)
+# Platform: x86_64-w64-mingw32/x64 (64-bit)
+
+# and these packages:
+
+# [1] topicmodels_0.1-12 slam_0.1-30        pvclust_1.2-2      plyr_1.8           Snowball_0.0-10   
+# [6] rJava_0.9-4        tm_0.5-9.1         Matrix_1.1-0       sna_2.3-1          igraph_0.6.6      
+# [11] ggplot2_0.9.3.1    stringr_0.6.2
+
 # get package with functions for interacting with Twitter.com
 require(twitteR) 
 # get 1500 tweets with #aaa2011 tag, note that 1500 is the max, and it's subject to filtering and other restrictions by Twitter
-aaa2011 <- searchTwitter('#AAA2011,', n=1500) 
+aaa2011 <- searchTwitter('#AAA2011', n=1500) 
 # convert to data frame
 df <- do.call("rbind", lapply(aaa2011, as.data.frame)) 
 # get column names to see structure of the data
@@ -9,6 +21,19 @@ names(df)
 # look at the first three rows to check content
 head(df,3) 
 
+# Note that the code accompanying this chapter allows for the reader to 
+# collect their own data directly from Twitter. However, the Twitter API changes
+# frequently, causing difficulties in reproducing the results of this code. To 
+# improve the reproducbility of this study, the  data used in this chapter 
+# are also available as a CSV file. The data are available at 
+# http://dx.doi.org/10.6084/m9.figshare.855630
+
+# The following three lines will read in the 
+# CSV file to the workspace read for further analysis
+ 
+dir <- "..." # full path to the folder on your computer containing the file
+file <- "Marwick_DMAR-chapter-3.csv" # name of the CSV file
+df <- read.csv(paste(dir, file, sep = "/"), stringsAsFactors = FALSE)
 
 # see how many unique Twitter accounts in the sample
 length(unique(df$screenName)) 
@@ -74,12 +99,10 @@ ggplot() +
   theme(plot.margin = unit(c(1,1,2,2), "lines"))
 
 
-
-
-
-
 # calculate the number of followers of each Twitter account
 # extract the usernames from the non-anonymised dataset
+# Note that this may take some time! And that's it's dependant on the Twitter
+# API, which changes frequently.
 users <- unique(df$screenName)
 users <- sapply(users, as.character)
 # make a data frame for further manipulation 
@@ -151,8 +174,6 @@ ggplot(sort.t.rt.subset.drop, aes(reorder(Var1, ratio), ratio)) +
   theme(plot.margin = unit(c(1,1,2,2), "lines"))
 
 
-
-
 # extract tweeter-retweeted pairs
 rt <- data.frame(user=rand.df$randuser, rt=rand.df$rt.rand)
 # omit pairs with NA and get only unique pairs
@@ -161,16 +182,25 @@ rt.u <- na.omit(unique(rt)) #
 require(igraph)
 require (sna)
 degree <- sna::degree
-g <- graph.data.frame(rt.u, directed = F)
-g <- as.undirected(g)
-g.adj <- get.adjacency(g)
-# plot network graph
-gplot(g.adj, usearrows = FALSE,
-      vertex.col = "grey",vertex.border = "black",
-      displaylabels = FALSE, edge.lwd = 0.01, edge.col  
-      = "grey30", vertex.cex = 0.5) 
+g <- graph.data.frame(rt.u, directed = F) 
+# note that the igraph package appears to have changed its plot
+# function between the time that the original code was used for the
+# analysis and revision for publication. The following line will
+# plot a basic network graph, ready for further customisation:
+plot.igraph(g)
+# and here is a rough approximation of the published plot
+plot(g,				#the graph to be plotted
+     layout=layout.fruchterman.reingold,	# the layout method. see the igraph documentation for details
+     vertex.label.dist=0.5,			#puts the name labels slightly off the dots
+     vertex.frame.color='blue', 		#the color of the border of the dots 
+     vertex.label.color='black',		#the color of the name labels
+     vertex.label.font=3,			#the font of the name labels
+     vertex.label.cex=0.5,			#specifies the size of the font of the labels. can also be made to vary
+     vertex.size = 0.5
+)
+
 # get some basic network attributes
-gden(g.adj) # density
+g.adj <- get.adjacency(g, sparse=FALSE)
 grecip(g.adj) # reciprocity
 gtrans(g.adj) # transitivity 
 centralization(g.adj, degree) 
@@ -180,11 +210,13 @@ print(cug.gden   <- cug.test(g.adj, gden))
 plot(cug.gden)
 range(cug.gden$rep.stat)
 # reciprocity
-print(cug.recip   <- cug.test(g.adj, grecip))
+cug.recip <- cug.test(g.adj, grecip)
+print(cug.recip)
 plot(cug.recip)
 range(cug.recip$rep.stat)
 # transistivity
-print(cug.gtrans <- cug.test(g.adj, gtrans))
+cug.gtrans <- cug.test(g.adj, gtrans)
+print(cug.gtrans)
 plot(cug.gtrans)
 range(cug.gtrans$rep.stat)
 # centralisation
@@ -204,12 +236,12 @@ a <- tm_map(a, removePunctuation)
 a <- tm_map(a, removeNumbers)
 a <- tm_map(a, removeWords, stopwords("english")) # this list needs to be edited and this function repeated a few times to remove high frequency context specific words with no semantic value 
 require(rJava) # needed for stemming function 
-library(Snowball) # also needed for stemming function 
+require(Snowball) # also needed for stemming function 
 a <- tm_map(a, stemDocument, language = "english") # converts terms to tokens
-a.tdm <- TermDocumentMatrix(a, control = list(minWordLength = 3)) # create a term document matrix, keeping only tokens longer than three characters, since shorter tokens are very hard to interpret
+a.tdm <- TermDocumentMatrix(a, control = list(minWordLength = 3)) # create a term document matrix, keepiing only tokens longer than three characters, since shorter tokens are very hard to interpret
 inspect(a.tdm[1:10,1:10]) # have a quick look at the term document matrix
 findFreqTerms(a.tdm, lowfreq=30) # have a look at common words, in this case, those that appear at least 30 times, good to get high freq words and add to stopword list and re-make the dtm, in this case add aaa, panel, session
-findAssocs(a.tdm, 'science', 0.30) # find associated words and strength of the common words. I repeated this function for the ten most frequent words.
+findAssocs(a.tdm, 'scienc', 0.3) # find associated words and strength of the common words. I repeated this function for the ten most frequent words.
 
 # investigate the URLs contained in the Twitter messages
 require(stringr)
@@ -232,12 +264,11 @@ ggplot(countlinkSub, aes(reorder(URL, N), N)) +
   theme(plot.margin = unit(c(1,1,2,2), "lines"))
 
 
-countlink<-sort(countlink) # sort them
-barplot(countlink) # plot freqs
-# or to use ggplot2, read on...
+# plot links
 countlink<-data.frame(na.omit((df$link)))
 names(countlink)="link"
 qplot(countlink$link, geom="bar")+coord_flip() # but not sorted, so let's keep going...
+require(plyr)
 links<-count(countlink, "link") # to get a data frame with two named vectors for sorting
 qplot(reorder(link,freq),freq,data=links, geom="bar")+coord_flip() # and here it is in order
 links2<-subset(links,links$freq>2) # subset of just links appearing more than twice
@@ -248,8 +279,8 @@ qplot(reorder(links2$link,links2$freq),links2$freq,data=links2, geom="bar")+coor
 # This is based on Jeffrey Breen's excellent tutorial at http://jeffreybreen.wordpress.com/2011/07/04/twitter-text-mining-r-slides/
 
 # download sentiment word list from here: http://www.cs.uic.edu/~liub/FBS/opinion-lexicon-English.rar un-rar and put somewhere logical on your computer
-hu.liu.pos = scan('F:/My Documents/My Papers/conferences/SAA2010/opinion-lexicon-English/positive-words.txt', what = 'character',comment.char=';') #load +ve sentiment word list
-hu.liu.neg = scan('F:/My Documents/My Papers/conferences/SAA2010/opinion-lexicon-English/negative-words.txt',what = 'character',comment.char= ';') #load -ve sentiment word list
+hu.liu.pos = scan('E:/My Documents/My Papers/conferences/SAA2010/opinion-lexicon-English/positive-words.txt', what = 'character',comment.char=';') #load +ve sentiment word list
+hu.liu.neg = scan('E:/My Documents/My Papers/conferences/SAA2010/opinion-lexicon-English/negative-words.txt',what = 'character',comment.char= ';') #load -ve sentiment word list
 pos.words = c(hu.liu.pos)
 neg.words = c(hu.liu.neg)
 score.sentiment = function(sentences, pos.words, neg.words, .progress='none')
@@ -294,7 +325,7 @@ score.sentiment = function(sentences, pos.words, neg.words, .progress='none')
   return(scores.df)
 }
 require(plyr)
-aaa.text <- laply(aaa2011, function(t)t$getText()) # draw on the original object of tweets that we first got to extract just the text of the tweets
+aaa.text <- df$text # get text of tweets
 length(aaa.text) #check how many tweets, make sure it agrees with the original sample size
 head(aaa.text, 5) #check content sample, see that it looks as expected, no weird characters, etc. 
 aaa.scores <- score.sentiment(aaa.text,pos.words,neg.words,.progress='text') # get scores for the tweet text 
@@ -317,7 +348,7 @@ ggplot(scien, aes(x = score)) + geom_histogram(binwidth = 1) + xlab("Sentiment s
 # repeat this block with different high frequency words
 
 a.tdm.sp <- removeSparseTerms(a.tdm, sparse=0.989)  # I found I had to iterate over this to ensure the tdm doesn't get too small... for example: 0.990 nrow=88, 0.989, nrow=67, 0.985, nrow=37, 0.98 nrow=23, 0.95 nrow=6
-a.tdm.sp.df <- as.data.frame(inspect(a.tdm.sp)) # convert document term matrix to data frame
+a.tdm.sp.df <- as.data.frame(inspect(a.tdm.sp )) # convert document term matrix to data frame
 nrow(a.tdm.sp.df) # check to see how many words we're left with after removing sparse terms
 # this analysis is based on http://www.statmethods.net/advstats/cluster.html 
 # scale and transpose data for cluster analysis
@@ -327,13 +358,11 @@ fit <- pvclust(a.tdm.sp.df.sc.t, method.hclust = "average", method.dist = "corre
 plot(fit, cex = 1.5, cex.pv = 1.2, col.pv = c(1,0,0), main="", xlab="", sub="")  # draw the dendrogram
 
 require(slam)
-a.tdm.sp.t <- t(a.tdm.sp) # transpose term document matrix, necessary for the next steps using mean term frequency-inverse document frequency (tf-idf) to select the vocabulary for topic modeling
+a.tdm.sp.t <- t(a.tdm.sp) # transpose document term matrix, necessary for the next steps using mean term frequency-inverse document frequency (tf-idf) to select the vocabulary for topic modeling
 summary(col_sums(a.tdm.sp.t)) # check median...
-mean_term_tfidf <- tapply(a.tdm.sp.t$v/row_sums(a.tdm.sp.t)[a.tdm.sp.t$i], a.tdm.sp.t$j,mean) * log2(nDocs(a.tdm.sp.t)/col_sums(a.tdm.sp.t>0)) # calculate tf-idf values
-# CAUTION: Note that Hugh J. Devlin has pointed out that this tf-idf is not the conventional computation because the term document matrix has been transposed
-# for the usual tf-idf computation, skip the transpose operation on line 330
-summary(mean_term_tfidf) # check median... note value for next line... 
-a.tdm.sp.t.tdif <- a.tdm.sp.t[,mean_term_tfidf>=1.0] # keep only those terms that are slightly less frequent that the median
+term_tfidf <- tapply(a.tdm.sp.t$v/row_sums(a.tdm.sp.t)[a.tdm.sp.t$i], a.tdm.sp.t$j,mean) * log2(nDocs(a.tdm.sp.t)/col_sums(a.tdm.sp.t>0)) # calculate tf-idf values
+summary(term_tfidf) # check median... note value for next line... 
+a.tdm.sp.t.tdif <- a.tdm.sp.t[,term_tfidf>=1.0] # keep only those terms that are slightly less frequent that the median
 a.tdm.sp.t.tdif <- a.tdm.sp.t[row_sums(a.tdm.sp.t) > 0, ]
 summary(col_sums(a.tdm.sp.t.tdif)) # have a look
 
@@ -354,14 +383,16 @@ ggplot(best.model.logLik.df, aes(x = topics, y = LL)) +
   theme_bw()  + 
   opts(axis.title.x = theme_text(vjust = -0.5, size = 14)) + 
   opts(axis.title.y=theme_text(size = 14, angle=90, vjust= -0.25)) + 
-  opts(plot.margin = unit(c(1,1,2,2), "lines"))  # plot nicely the ggsave(file = "model_LL_per_topic_number.pdf") # export the plot to a PDF file
+  opts(plot.margin = unit(c(1,1,2,2), "lines"))  
+
+# ggsave(file = "model_LL_per_topic_number.pdf") # export the plot to a PDF file
 # it's not easy to see exactly which topic number has the highest LL, so let's look at the data...
 best.model.logLik.df.sort <- best.model.logLik.df[order(-best.model.logLik.df$LL), ] # sort to find out which number of topics has the highest loglik, in this case 23 topics. 
 best.model.logLik.df.sort # have a look to see what's at the top of the list, the one with the highest score
+ntop <- best.model.logLik.df.sort[1,]$topics
 
 
-
-lda <- LDA(a.tdm.sp.t.tdif,23) # generate a LDA model with 23 topics, as found to be optimum
+lda <- LDA(a.tdm.sp.t.tdif, ntop) # generate a LDA model the optimum number of topics
 get_terms(lda, 5) # get keywords for each topic, just for a quick look
 get_topics(lda, 5) # gets topic numbers per document
 lda_topics<-get_topics(lda, 5) 
